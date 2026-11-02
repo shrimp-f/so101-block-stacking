@@ -1,0 +1,33 @@
+services:
+  sim:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: so101-stack:dev
+    container_name: so101-stack
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    shm_size: 4gb # DataLoader のワーカー間共有メモリ
+    environment:
+      - START_VNC=${START_VNC:-0}
+      - HF_HOME=/root/.cache/huggingface
+      - PYTHONPATH=/workspace # so101_stack パッケージを import できるようにする
+    volumes:
+      - .:/workspace # ソースはホスト側で編集
+      - so101-data:/workspace/data # データセットは Docker ボリュームに置いて I/O を速くする
+      - hf-cache:/root/.cache/huggingface
+    ports:
+      - "6080:6080" # noVNC
+      - "9876:9876" # Rerun web viewer
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  so101-data:
+  hf-cache:

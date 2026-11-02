@@ -1,0 +1,7 @@
+data/
+outputs/
+__pycache__/
+*.pyc
+# scripts/fetch_so101.sh で取得するモデル (TheRobotStudio/SO-ARM100)
+assets/so101/
+.claude/
