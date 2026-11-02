@@ -5,3 +5,8 @@ __pycache__/
 # scripts/fetch_so101.sh で取得するモデル (TheRobotStudio/SO-ARM100)
 assets/so101/
 .claude/
+# 課題の提出用資料 (説明資料の HTML・PDF・画像)。シミュレータ本体とは別に管理する
+report/
+# 動画と PDF はサイズが大きく、スクリプト (scripts/make_video.py など) で作り直せる
+*.mp4
+*.pdf

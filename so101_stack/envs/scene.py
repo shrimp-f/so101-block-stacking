@@ -119,6 +119,12 @@ def _add_world(spec: mujoco.MjSpec) -> None:
     wb.add_camera(
         name="front", pos=front_pos, quat=look_at_quat(front_pos, [0.17, 0.0, 0.06], [0.75, 0.66, 0]), fovy=50
     )
+    # SmolVLA の事前学習データ (実機 SO-100) によくある配置に近づけた、真上から見下ろすカメラと横からのカメラ。
+    # 学習なしの SmolVLA を試すときだけ使う (camera1 = top, camera2 = wrist, camera3 = side)
+    top_pos = [0.20, 0.0, 0.75]
+    wb.add_camera(name="top", pos=top_pos, quat=look_at_quat(top_pos, [0.20, 0.0, 0.0], [0, -1, 0]), fovy=50)
+    side_pos = [0.22, -0.55, 0.22]
+    wb.add_camera(name="side", pos=side_pos, quat=look_at_quat(side_pos, [0.20, 0.0, 0.05], [1, 0, 0]), fovy=50)
 
 
 def _add_gripper_parts(spec: mujoco.MjSpec, cfg: SceneConfig) -> None:

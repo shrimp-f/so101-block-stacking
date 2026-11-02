@@ -59,8 +59,11 @@ def wrap_angle(a: float) -> float:
 
 
 class ScriptedStacker:
-    def __init__(self, env: StackEnv):
+    def __init__(self, env: StackEnv, best_effort: bool = False):
+        """best_effort: タワーの上に置く経路で逆運動学が厳密に解けないとき、止まらずに
+        誤差が最も小さい向きで近づいて置く (届く高さの限界付近を試す用。データ収集では使わない)。"""
         self.env = env
+        self.best_effort = best_effort
         self.ik = IKSolver(env.model)
         self.ranges = joint_ranges(env.model)
         self.inits = [lerobot_to_sim(np.append(p, 0.0), self.ranges)[:5] for p in IK_INIT_POSES]
@@ -103,7 +106,10 @@ class ScriptedStacker:
     # --- 掴む・置く -----------------------------------------------------------
 
     def _pick(self, i: int) -> Iterator[np.ndarray]:
-        pose = self.env.block_poses()[i]
+        yield from self._pick_at(self.env.block_poses()[i])
+
+    def _pick_at(self, pose: np.ndarray) -> Iterator[np.ndarray]:
+        """pose = [x, y, z, qw, qx, qy, qz] のブロックを掴んで持ち上げる。"""
         center = pose[:3] + [0, 0, GRASP_Z_OFFSET]
 
         # ブロックの幅の方向を挟む 2 通りのうち、近づく位置・掴む位置の両方に届き、手首の回転が小さい方
@@ -117,7 +123,7 @@ class ScriptedStacker:
             if candidates:
                 break
         if not candidates:
-            raise PlanningError(f"cannot reach block {i} at {np.round(pose[:3], 3)}")
+            raise PlanningError(f"cannot reach block at {np.round(pose[:3], 3)}")
         _, yaw, target, above, approach = min(candidates, key=lambda c: c[0])
 
         yield from self._move_joints(above, gripper=GRIPPER_OPEN, yaw=yaw)
@@ -137,6 +143,10 @@ class ScriptedStacker:
             # 1 段目: 長辺を半径方向 (ロボットから見て前後) に向けて置く
             place_center = np.array([*TOWER_POS, h / 2])
             base_yaw = np.arctan2(TOWER_POS[1], TOWER_POS[0])
+        yield from self._place_at(place_center, base_yaw, level=len(chain) + 1)
+
+    def _place_at(self, place_center: np.ndarray, base_yaw: float, level: int) -> Iterator[np.ndarray]:
+        """持っているブロックを、中心 place_center・長辺の向き base_yaw で置く。"""
         target = place_center + [0, 0, GRASP_Z_OFFSET + PLACE_DROP]
         above = target + [0, 0, PLACE_CLEARANCE]
 
@@ -154,8 +164,11 @@ class ScriptedStacker:
             q_above = self._solve(above, yaw, q_init=q_side)
             if q_above is not None and self._solve(target, yaw, q_init=q_above) is not None:
                 candidates.append((abs(q_side[ROLL]), yaw))
+        if not candidates and self.best_effort:
+            candidates = [(self._worst_pos_err((side, above, target), yaw), yaw)
+                          for yaw in base_yaw + np.pi / 2 + np.array([0, np.pi])]
         if not candidates:
-            raise PlanningError(f"cannot reach tower level {len(chain) + 1} at {np.round(target, 3)}")
+            raise PlanningError(f"cannot reach tower level {level} at {np.round(target, 3)}")
         _, yaw = min(candidates, key=lambda c: c[0])
 
         yield from self._move_line(side, FAST_SPEED, yaw=yaw)
@@ -184,6 +197,14 @@ class ScriptedStacker:
         q0 = self.q_arm if q_init is None else q_init
         res = self.ik.solve_multi(pos, top_down_rotation(yaw), [q0, *self.inits])
         return res.q if res.success else None
+
+    def _worst_pos_err(self, points: tuple, yaw: float) -> float:
+        """points を順にたどるときの、逆運動学の位置誤差の最大値 [m]。"""
+        q, worst = self.q_arm, 0.0
+        for p in points:
+            res = self.ik.solve_multi(p, top_down_rotation(yaw), [q, *self.inits])
+            q, worst = res.q, max(worst, res.pos_err)
+        return worst
 
     def _move_line(self, target: np.ndarray, speed: float, yaw: float | None = None) -> Iterator[np.ndarray]:
         """把持点を今の位置から target まで直線で動かす。yaw を渡すと向きも途中で回す。"""

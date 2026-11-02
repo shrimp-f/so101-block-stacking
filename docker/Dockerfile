@@ -45,6 +45,9 @@ RUN pip install \
 # メッシュ加工 (描画用の低ポリゴンメッシュ生成)
 RUN pip install trimesh fast-simplification
 
+# AI の推論: SmolVLA (VLA) と、ブロック認識用の物体検出モデル (OWLv2, transformers に含まれる)
+RUN pip install "lerobot[smolvla]==${LEROBOT_VERSION}"
+
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 

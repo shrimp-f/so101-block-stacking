@@ -30,11 +30,14 @@ Gymnasium 環境の ID は `so101_stack/StackBlocks-v0` です。
 |---|---|
 | `so101_stack/envs/` | シーンの組み立てと Gymnasium 環境 |
 | `so101_stack/controllers/ik.py` | 逆運動学 |
-| `so101_stack/scripted/stack_policy.py` | 自動デモ用のスクリプトポリシー |
-| `scripts/` | 環境チェック、デモ実行、データセット作成などのスクリプト |
+| `so101_stack/scripted/stack_policy.py` | ルールベースのスクリプトポリシー（シミュレータの正解の位置を使う） |
+| `so101_stack/perception/block_detector.py` | AI 物体検出（OWLv2）+ 深度によるブロックの位置・向きの推定 |
+| `so101_stack/scripted/perception_stacker.py` | 物体検出の結果だけで積むポリシー |
+| `scripts/` | 環境チェック、デモ実行、物体検出・SmolVLA の評価（`run_perception.py`、`run_smolvla.py`）、動画作成など |
 | `docker/`、`docker-compose.yml` | コンテナ環境 |
 | `doc/` | 計画（plan.md）、セットアップ手順（setup.md）、報告書（report.md） |
-| `report/` | 説明資料（HTML） |
+
+動画（`*.mp4`）と課題の提出資料（`report/`）はリポジトリに含めていません。動画は `scripts/make_video.py` で作り直せます。
 
 ## 謝辞
 

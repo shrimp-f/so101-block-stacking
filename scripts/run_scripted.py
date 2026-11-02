@@ -21,9 +21,9 @@ from so101_stack.scripted.stack_policy import PlanningError, ScriptedStacker
 OUT_DIR = Path("outputs/phase3")
 
 
-def run_episode(env: StackEnv, seed: int, record: bool) -> tuple[dict, str, list]:
+def run_episode(env: StackEnv, seed: int, record: bool, best_effort: bool = False) -> tuple[dict, str, list]:
     env.reset(seed=seed)
-    policy = ScriptedStacker(env)
+    policy = ScriptedStacker(env, best_effort=best_effort)
     policy.reset()
     frames, info, reason = [], {}, "timeout"
     while True:
@@ -52,6 +52,7 @@ def main() -> None:
     parser.add_argument("--episodes", type=int, default=20)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--video", type=int, default=0, help="動画を保存するエピソード数")
+    parser.add_argument("--best-effort", action="store_true", help="置く経路が厳密に解けなくても近づいて置く")
     args = parser.parse_args()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -61,7 +62,7 @@ def main() -> None:
     t0 = time.perf_counter()
     for ep in range(args.episodes):
         record = ep < args.video
-        info, reason, frames = run_episode(env, args.seed + ep, record)
+        info, reason, frames = run_episode(env, args.seed + ep, record, args.best_effort)
         reasons[reason.split(" at ")[0]] += 1
         heights.append(info.get("max_stack_height", 0))
         print(f"ep {ep:3d} seed {args.seed + ep}: {reason}, max height {heights[-1]}, steps {env._step_count}")
